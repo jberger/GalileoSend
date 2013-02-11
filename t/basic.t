@@ -14,7 +14,7 @@ sub json  { return +{ text   => j(shift) } }
 sub bytes { return +{ binary => shift    } }
 
 my $dir = File::Temp->newdir;
-my ($file, $meta, $unsafe);
+our ($file, $meta, $unsafe);
 
 websocket '/' => sub {
   my $self = shift;
@@ -32,48 +32,80 @@ websocket '/' => sub {
 
 my $t = Test::Mojo->new;
 
-# test file_start
+subtest 'Standard Transmission' => sub {
+  local ($file, $meta, $unsafe);
 
-my $filename = 'myfile';
-my $sent_meta = { name => $filename, size => 10, directory => 'unsafe' };
-$t->websocket_ok('/')
-  ->send_ok(json( $sent_meta ))
-  ->message_ok
-  ->json_message_is( '/' => { ready => 1 } );
+  # test file_start
 
-isa_ok( $file, 'Mojo::Asset');
+  my $filename = 'goodfile';
+  my $sent_meta = { name => $filename, size => 10, directory => 'unsafe' };
+  $t->websocket_ok('/')
+    ->send_ok(json( $sent_meta ))
+    ->message_ok
+    ->json_message_is( '/' => { ready => 1 } );
 
-{
-  local $meta->{directory} = $meta->{directory}; # protect for later use
+  isa_ok( $file, 'Mojo::Asset');
 
-  is( $unsafe->{directory}, delete $sent_meta->{directory}, 'unsafe keys scrubbed' );
-  is( delete $meta->{directory}, "$dir", 'directory gets merged into meta' );
+  {
+    local $meta->{directory} = $meta->{directory}; # protect for later use
 
-  is_deeply( $meta, $sent_meta, 'meta round-trip' );
-}
+    is( $unsafe->{directory}, delete $sent_meta->{directory}, 'unsafe keys scrubbed' );
+    is( delete $meta->{directory}, "$dir", 'directory gets merged into meta' );
 
-# test file_chunk (in two chunks)
+    is_deeply( $meta, $sent_meta, 'meta round-trip' );
+  }
 
-$t->send_ok(bytes('x' x 4))
-  ->message_ok
-  ->json_message_is( '/' => { ready => 1 } );
+  # test file_chunk (in two chunks)
 
-is( $file->size, 4, 'got size');
+  $t->send_ok(bytes('x' x 4))
+    ->message_ok
+    ->json_message_is( '/' => { ready => 1 } );
 
-$t->send_ok(bytes('x' x 6))
-  ->message_ok
-  ->json_message_is( '/' => { ready => 1 } );
+  is( $file->size, 4, 'got size');
 
-is( $file->size, 10, 'got size');
+  $t->send_ok(bytes('x' x 6))
+    ->message_ok
+    ->json_message_is( '/' => { ready => 1 } );
 
-# test file_finished
+  is( $file->size, 10, 'got size');
 
-$t->send_ok(json({ finished => \1 }))
-  ->finish_ok;
+  # test file_finished
 
-my $file_path = File::Spec->catfile( "$dir", $filename );
-ok( -e $file_path, 'File created' );
-is( -s $file_path, 10, 'File has correct size' );
+  $t->send_ok(json({ finished => \1 }))
+    ->finish_ok;
+
+  my $file_path = File::Spec->catfile( "$dir", $filename );
+  ok( -e $file_path, 'File created' );
+  is( -s $file_path, 10, 'File has correct size' );
+
+};
+
+subtest 'Incomplete Transmission' => sub {
+  local ($file, $meta, $unsafe);
+
+  my $filename = 'goodfile';
+  my $sent_meta = { name => $filename, size => 10 };
+  $t->websocket_ok('/')
+    ->send_ok(json( $sent_meta ))
+    ->message_ok
+    ->json_message_is( '/' => { ready => 1 } );
+
+  isa_ok( $file, 'Mojo::Asset');
+
+  $t->send_ok(bytes('x' x 8))
+    ->message_ok
+    ->json_message_is( '/' => { ready => 1 } );
+
+  is( $file->size, 8, 'got size');
+
+  # Send finished signal, server reports incomplete
+
+  $t->send_ok(json({ finished => \1 }))
+    ->message_ok
+    ->json_message_is( '/' => { error => 'Expected: 10 bytes. Got: 8 bytes.', fatal => 1 } )
+    ->finish_ok;
+
+};
 
 done_testing();
 

@@ -118,6 +118,13 @@ sub register {
     # save file
     $self->on( file_finish => sub {
       my ($ws, $file, $meta) = @_;
+
+      my $size = $file->size;
+      if ( $size != $meta->{size} ) {
+        $ws->send_error_signal( "Expected: $meta->{size} bytes. Got: $size bytes.", 1 );
+        return;
+      }
+
       my $target = $meta->{name} || 'unknown';
       if ( -d $meta->{directory} ) {
         $target = File::Spec->catfile( $meta->{directory}, $target );
