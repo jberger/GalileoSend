@@ -22,8 +22,8 @@ my $builder = Module::Build->new(
 
   meta_merge => {
     resources  => {
-      repository => "http://github.com/jberger/Mojolicious-Plugin-GalileoSend",
-      bugtracker => "http://github.com/jberger/Mojolicious-Plugin-GalileoSend/issues",
+      repository => "http://github.com/jberger/GalileoSend",
+      bugtracker => "http://github.com/jberger/GalileoSend/issues",
     },
   }
 );
