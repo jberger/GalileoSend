@@ -52,9 +52,15 @@ isa_ok( $file, 'Mojo::Asset');
   is_deeply( $meta, $sent_meta, 'meta round-trip' );
 }
 
-# test file_chunk
+# test file_chunk (in two chunks)
 
-$t->send_ok(bytes('x' x 10))
+$t->send_ok(bytes('x' x 4))
+  ->message_ok
+  ->json_message_is( '/' => { ready => 1 } );
+
+is( $file->size, 4, 'got size');
+
+$t->send_ok(bytes('x' x 6))
   ->message_ok
   ->json_message_is( '/' => { ready => 1 } );
 
