@@ -9,7 +9,7 @@ any '/' => 'index';
 
 websocket '/upload' => sub {
   my $self = shift;
-  my $dir = File::Spec->rel2abs('upload');
+  my $dir = $self->app->home->rel_dir('upload');
   mkdir $dir unless -d $dir;
   $self->receive_file({directory => $dir});
 };

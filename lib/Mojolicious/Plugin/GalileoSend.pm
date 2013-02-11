@@ -27,7 +27,7 @@ sub find_javascript_directory {
     return $share_dir if -e $file;
   }
 
-  die "Could not find static files path ($local_dir, $dir)";
+  die "Could not find static files path ($local_dir, $share_dir)";
 }
 
 sub register {
