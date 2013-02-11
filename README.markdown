@@ -1,4 +1,4 @@
-# Galileo Send
+# GalileoSend
 
 **GalileoSend** is pure language agnostic multipart file uploading spec
 using websockets for transport and a simple flexible protocol (documented
@@ -7,6 +7,10 @@ below). All messages between the client and server are either JSON or binary
 
 Included is a javascript implementation for the client-side and a Mojolicious
 (Perl) implementation for the server-side.
+
+The name comes from the fact that GalileoSend was created to support uploads
+for the Galileo Perl/Mojolicious CMS. The author hopes that the protocol spec
+and javascript client might be more broadly useful.
 
 ## Protocol Documentation
 
