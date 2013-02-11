@@ -17,18 +17,24 @@ websocket with TEXT opcode.
 
 ## Client side (javascript)
 
-* Client starts by connecting and sending file meta-data.
+### Starting
+
+Client starts by connecting and sending file meta-data.
 
     { name : filename, size : size_in_bytes }
 
 Clien then waits for ready signal.
 
-* On receipt of ready signal reply with chunk of file (on BINARY channel), 
+### Sending the file
+
+On receipt of ready signal reply with chunk of file (on BINARY channel), 
 fire the `onchunck` handler (called with the ratio of sent data to total data)
 then wait for ready signal. Repeat until file is finished, or another signal 
 causes other action to be taken.
 
-* On receipt of ready signal when the file has finished transmitting, reply
+### Signaling that the file upload is complete
+
+On receipt of ready signal when the file has finished transmitting, reply
 with finished signal.
 
     { finished : true }
@@ -41,22 +47,28 @@ and the file's hash result for comparison to the received file.
 Servers should not necessarily interpret the lack of a hash parameter as a
 reason for failure, as the browser may not support it.
 
-* On receipt of error signal, store the error signal and fire the `onerror`
+### Errors
+
+On receipt of error signal, store the error signal and fire the `onerror`
 handler (with argument being the error signal contents). If fatal, close the
 connection, which will then fire the `onfailure` handler.
 
-* On receipt of close signal close connection. If all filedata has been sent,
+*TODO: Transport error (ws.onerror handler)*
+
+### Closing the connection
+
+On receipt of close signal, close the connection. If all filedata has been sent,
 mark as successful (`onsuccess` will fire rather than `onfailure`).
 
-* In any case, the `onclose` handler will fire either the `onsuccess` (no
+In any case, the `onclose` handler will fire either the `onsuccess` (no
 arguments) handler or the `onfailure` handler (called with an array of received
 error signals).
 
-*TODO: Transport error (ws.onerror handler)*
-
 ## Server side (generic)
 
-* On reciept of file metadata and when ready for file chunks send ready signal.
+### Signaling ready for file chunk
+
+On reciept of file metadata and when ready for file chunks send ready signal.
 
     { ready : true [, chunksize : size_in_bytes ] }
 
@@ -64,12 +76,16 @@ Optionally a `chunksize` key may be sent telling the client the maximum number
 of bytes the next chunk may be; if this number is zero, the default will be 
 used. 
 
-* On any error send error signal with optional `fatal` boolean flag. All other
+### Errors
+
+On any error send error signal with optional `fatal` boolean flag. All other
 keys are assumed to be for the handler.
 
     { error : truthy_value [, fatal : boolean ] }
 
-* On receipt of finish signal, reply with either a standard error signal or the
+### Closing the connection
+
+On receipt of finish signal, reply with either a standard error signal or the
 close signal.
 
     { close : true }
