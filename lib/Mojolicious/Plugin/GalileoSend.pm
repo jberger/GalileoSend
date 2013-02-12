@@ -45,7 +45,7 @@ sub register {
 
   $app->helper( galileo_error_signal => sub {
     my $self = shift;
-    my $message = shift;
+    my $message = shift || 'Unspecified';
     my $payload = { 
       error => $message,
       fatal => $_[0] ? \1 : \0,
@@ -120,7 +120,7 @@ sub register {
       my ($ws, $file, $meta) = @_;
 
       my $size = $file->size;
-      if ( $size != $meta->{size} ) {
+      if ( defined $meta->{size} and $size != $meta->{size} ) {
         $ws->galileo_error_signal( "Expected: $meta->{size} bytes. Got: $size bytes.", 1 );
         return;
       }
@@ -147,11 +147,12 @@ Mojolicious::Plugin::GalileoSend - Websocket file uploads for Mojolicious (Galil
 
 =head1 SYNOPSIS
 
-  # Mojolicious
-  $self->plugin('GalileoSend');
+ # Example shown using Mojolicious::Lite
+ plugin 'GalileoSend';
 
-  # Mojolicious::Lite
-  plugin 'GalileoSend';
+ websocket '/upload' => sub {
+   $_[0]->galileo_receive_file({ directory => 'uploads' });
+ };
 
 =head1 DESCRIPTION
 
@@ -174,27 +175,82 @@ This method finds and returns the directory containing the F<galileo_send.js> fi
 
 Register plugin in L<Mojolicious> application.
 
-When called (usually by the C<plugin> helper as seen in the example) this sets up the provided helpers. Then necessary events and default handlers for those events are setup by the L<receive_file> helper.
+When called (usually by the C<plugin> helper as seen in the example) this sets up the provided helpers. Then necessary events and default handlers for those events are setup by the L</receive_file> helper.
 
 =head1 HELPERS
 
 =head2 galileo_receive_file
 
+ $c->galileo_receive_file; # setup file uploads, to working directory
+ $c->galileo_receive_file({ directory => 'uploads' }); # setup file uploads, to uploads directory
+ $c->galileo_receive_file({ name => 'myname' }); # setup file uploads, override given file name
+
+Connects handlers to the websocket C<text> and C<binary> events, and adds the new events below (see L</EVENTS>).
+
+Optionally this helper can take up to two arguments. First a hash-reference of key-value pair of initial meta-data, this will override any provided from the data sent from the client. The client should send C<name> and C<size> keys, additionally the default handler will recognize a C<directory> key. 
+
+The second argument (or only) is a hashref of 'unsafe' keys, that is keys which should not be merged from the client. If unspecified, the default handler considers the C<directory> key unsafe, this is so that the client cannot choose the directory where the server will save the file. The key-value pair that are scrubbed can be later accessed in the C<file_start> handler.
+
+For simple use, this is the only action an app needs to take to prepare for file uploads.
+
 =head2 galileo_ready_signal
+
+ $c->galileo_ready_signal; # ready
+ $c->galileo_ready_signal(1000); # ready for up to 1000 bytes
+
+Sends the ready signal to the client, which requests the next file chunk. Optionally it takes a number representing the maximum number of bytes that the client should send.
 
 =head2 galileo_error_signal
 
+ $c->galileo_error_signal( 'The splines cannot be reticulated' ); # error
+ $c->galileo_error_signal( 'No more frobs to baz', 1 ); # fatal error
+
+Sends the error signal to the client. The first argument is a string, the message to send; the default is C<Unspecified> but you should do better than that. The second argument, if true, adds the C<fatal> flag to the error.
+
 =head2 galileo_close_signal
+
+ $c->galileo_close_signal;
+
+Sends the close signal to the client. This should only be sent after receiving the finished signal; in which case this indicates success and tells the client to close the connection. Note that there is no 'failing close' signal, rather one should send a fatal error signal, even at this stage.
 
 =head1 EVENTS
 
-L<Mojolicious::Plugin::GalileoSend> adds handlers to both the websocket C<text> and C<binary> events which should not be changed. Futher it causes the websocket to emit several new events.
+The L</galileo_receive_file> helper adds handlers to both the websocket C<text> and C<binary> events which should not be changed. Futher it causes the websocket to emit several new events.
+
+Each event gets at least two parameters, the L<Mojo::Asset> object which gets the file stream, and a hash-reference of meta-data.
 
 =head2 file_start
 
+ $c->on( file_start => sub {
+   my ($file, $meta, $unsafe) = @_;
+   ...
+ });
+
+Emitted on connection and receipt of file meta-data. Any keys designated unsafe are filtered out and held in the C<unsafe> hashref, which is passed as the third parameter.
+
+The default handler for this signal does nothing more than call L</galileo_ready_signal>.
+
 =head2 file_chunk
 
+ $c->on( file_chunk => sub {
+    my ($file, $meta) = @_;
+    ...
+ });
+
+Emitted on receipt of a chunk of the file. The L<Mojo::Asset> contained in the first argument will already reflect the added data.
+
+Two handlers are attached to this signal by default, the first that logs debugging information, the second calls L</galileo_ready_signal> requesting the next chunk.
+
 =head2 file_finish
+
+ $c->on( file_finish => sub {
+   my ($file, $meta) = @_;
+   ...
+ });
+
+Emitted on receipt of the finish signal. The L<Mojo::Asset> contained in the first argument should now contain the entire file.
+
+The default handler checks that the file size equals the expected file size (if known from the meta-data). It then saves the file the C<name> from the meta-data which should by now be specifed. It saves it to either the directory in the meta-data if known or to the current working directory.
 
 =head1 SEE ALSO
 
