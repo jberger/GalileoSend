@@ -74,7 +74,7 @@ sub setup_ws {
         if ( $finished ) {
           $success = 1;
         }
-        $self->client_close;
+        $self->finish;
         return;
       }
 
@@ -83,7 +83,7 @@ sub setup_ws {
         mywarn( $status->{error} );
         push @$error_messages, $status;
         if ( $status->{fatal} ) {
-          $self->client_close;
+          $self->finish;
         }
         return;
       }
