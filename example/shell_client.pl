@@ -10,6 +10,8 @@
 use Mojo::Base -strict;
 
 use Mojo::UserAgent;
+use Mojo::IOLoop;
+
 use Mojo::URL;
 use Mojo::JSON 'j';
 
@@ -27,13 +29,14 @@ $url = "//$url" unless $url =~ m!^(?:\w+:)?//!; # must be an absolute url
 $url = Mojo::URL->new($url);
 $url->scheme('ws');
 
-sub mywarn { 
-  my $message = shift;
-  $message =~ s/(?<!\n)\z/\n/;  # add a newline if necessary
-  warn $message;
-}
+my $ua = Mojo::UserAgent->new;
+my $delay = Mojo::IOLoop->delay;
 
-sub setup_ws (_) {
+setup_ws($_) for @ARGV;
+
+$delay->wait unless $delay->ioloop->is_running;
+
+sub setup_ws {
   my $file = shift;
   unless ( -e $file ) {
     warn "$file cannot be accessed, aborting\n";
@@ -41,9 +44,9 @@ sub setup_ws (_) {
   }
 
   my $filedata = {
-    name => scalar fileparse $file,
+    name => (scalar fileparse $file),
+    size => -s $file,
   };
-  $filedata->{size} = -s $file;
 
   my $fh;
   unless ( open $fh, '<', $file ) {
@@ -51,14 +54,13 @@ sub setup_ws (_) {
     return;
   };
 
-  my $chunksize = $chunksize;
   my $slice_start = 0;
   my $end = $filedata->{size};
   my $finished = 0;
   my $success = 0;  # set to true on completion
   my $error_messages = [];
 
-  my $ua = Mojo::UserAgent->new;
+  $delay->begin;
 
   $ua->websocket($url, sub {
     my ($ua, $tx) = @_;
@@ -78,7 +80,7 @@ sub setup_ws (_) {
 
       # server reports error
       if ( $status->{error} ) {
-        mywarn $status->{error};
+        mywarn( $status->{error} );
         push @$error_messages, $status;
         if ( $status->{fatal} ) {
           $self->client_close;
@@ -109,37 +111,40 @@ sub setup_ws (_) {
 
       $self->send({ binary => $temp });
 
-      if ( $read ) {
+      #if ( $read ) {
         $slice_start += $read;
         warn $slice_start / $end * 100 . "%\n";
-      } else {
-        $finished = 1 unless $read;  # read returns 0 on EOF
-        warn "100%\n";
-      }
+      #} else {
+      #  $finished = 1;  # read returns 0 on EOF
+      #  warn "100%\n";
+      #}
     });
 
     $tx->on( finish => sub {
       if ( $success ) {
         print "$file sent successfully\n";
-        return;
+
+      } else {
+
+        $error_messages->[0] = { error => 'Unknown upload error' }
+          unless @$error_messages;
+
+        require Data::Dumper;
+        warn "$file upload failed with the following warnings:\n";
+        warn Data::Dumper::Dumper($error_messages);
       }
 
-      unless ( @$error_messages ) {
-        $error_messages->[0] = { error => 'Unknown upload error' };
-      }
-
-      require Data::Dumper;
-      warn "$file upload failed with the following warnings:\n";
-      warn Data::Dumper::Dumper($error_messages); 
+      $delay->end;
     });
 
     $tx->send({ text => j( $filedata ) });
   });
 
-  return $ua;
 }
 
-my @agents = map { setup_ws } @ARGV;
-
-Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
+sub mywarn { 
+  my $message = shift;
+  $message =~ s/(?<!\n)\z/\n/;  # add a newline if necessary
+  warn $message;
+}
 
