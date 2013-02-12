@@ -61,14 +61,11 @@ sub setup_ws (_) {
   my $ua = Mojo::UserAgent->new;
 
   $ua->websocket($url, sub {
-    my ($self, $tx) = @_;
+    my ($ua, $tx) = @_;
 
     $tx->on( text => sub {
       my ($self, $text) = @_;
       my $status = j($text);
-
-      use DDP;
-      p $status;
 
       # got close signal
       if ( $status->{close} ) {
