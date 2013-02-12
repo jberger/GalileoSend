@@ -10,7 +10,7 @@ websocket '/upload' => sub {
   my $self = shift;
   my $dir = $self->app->home->rel_dir('upload');
   mkdir $dir unless -d $dir;
-  $self->receive_file({directory => $dir});
+  $self->galileo_receive_file({directory => $dir});
 };
 
 app->start;

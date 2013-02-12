@@ -19,7 +19,7 @@ our ($file, $meta, $unsafe);
 websocket '/' => sub {
   my $self = shift;
 
-  $self->receive_file({ directory => "$dir" });
+  $self->galileo_receive_file({ directory => "$dir" });
 
   my $monitor = sub {
     (undef, $file, $meta, $unsafe) = @_; # unsafe only sent on file_start

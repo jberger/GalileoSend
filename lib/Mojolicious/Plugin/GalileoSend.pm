@@ -36,14 +36,14 @@ sub register {
   # find static folder
   push @{ $app->static->paths }, $self->find_javascript_directory;
 
-  $app->helper( send_ready_signal => sub {
+  $app->helper( galileo_ready_signal => sub {
     my $self = shift;
     my $payload = { ready => \1 };
     $payload->{chunksize} = shift if @_;
     $self->send({ text => j($payload) });
   });
 
-  $app->helper( send_error_signal => sub {
+  $app->helper( galileo_error_signal => sub {
     my $self = shift;
     my $message = shift;
     my $payload = { 
@@ -53,12 +53,12 @@ sub register {
     $self->send({ text => j($payload) });
   });
 
-  $app->helper( send_close_signal => sub {
+  $app->helper( galileo_close_signal => sub {
     my $self = shift;
     $self->send({ text => j({ close => \1 }) });
   });
 
-  $app->helper( receive_file => sub {
+  $app->helper( galileo_receive_file => sub {
     my $self = shift;
 
     # setup text/binary handlers
@@ -100,7 +100,7 @@ sub register {
     # connect default handlers for new file_* events
 
     # begin file receipt
-    $self->on( file_start => sub { $_[0]->send_ready_signal } );
+    $self->on( file_start => sub { $_[0]->galileo_ready_signal } );
 
     # log progress
     $self->on( file_chunk => sub {
@@ -113,7 +113,7 @@ sub register {
     });
 
     # inform the sender to send the next chunk
-    $self->on( file_chunk => sub { $_[0]->send_ready_signal } );
+    $self->on( file_chunk => sub { $_[0]->galileo_ready_signal } );
 
     # save file
     $self->on( file_finish => sub {
@@ -121,7 +121,7 @@ sub register {
 
       my $size = $file->size;
       if ( $size != $meta->{size} ) {
-        $ws->send_error_signal( "Expected: $meta->{size} bytes. Got: $size bytes.", 1 );
+        $ws->galileo_error_signal( "Expected: $meta->{size} bytes. Got: $size bytes.", 1 );
         return;
       }
 
@@ -132,7 +132,7 @@ sub register {
       $file->move_to($target);
       my $message = sprintf q{Upload: '%s' - Saved to '%s'}, $meta->{name}, $target;
       $ws->app->log->debug( $message );
-      $ws->send_close_signal;
+      $ws->galileo_close_signal;
     });
 
   });
@@ -143,7 +143,7 @@ __END__
 
 =head1 NAME
 
-Mojolicious::Plugin::GalileoSend - Mojolicious Plugin
+Mojolicious::Plugin::GalileoSend - Websocket file uploads for Mojolicious (GalileoSend protocol)
 
 =head1 SYNOPSIS
 
@@ -155,21 +155,63 @@ Mojolicious::Plugin::GalileoSend - Mojolicious Plugin
 
 =head1 DESCRIPTION
 
-L<Mojolicious::Plugin::GalileoSend> is a L<Mojolicious> plugin.
+L<Mojolicious::Plugin::GalileoSend> is a L<Mojolicious> plugin which implements the L<GalileoSend|https://github.com/jberger/GalileoSend> protocol. This protocol is for sending files over websocket transport in a sane positive-confirmation way. This Mojolicious plugin is non-blocking and comes bundled with a javascript client implementation ready to use.
 
 =head1 METHODS
 
 L<Mojolicious::Plugin::GalileoSend> inherits all methods from
 L<Mojolicious::Plugin> and implements the following new ones.
 
+=head2 find_javascript_directory
+
+ $plugin->find_javascript directory
+
+This method finds and returns the directory containing the F<galileo_send.js> file. This might be in the development directory F<js/> before installation or in a directory managed by L<File::ShareDir> afterwards.
+
 =head2 register
 
-  $plugin->register(Mojolicious->new);
+ $plugin->register(Mojolicious->new);
 
 Register plugin in L<Mojolicious> application.
+
+When called (usually by the C<plugin> helper as seen in the example) this sets up the provided helpers. Then necessary events and default handlers for those events are setup by the L<receive_file> helper.
+
+=head1 HELPERS
+
+=head2 galileo_receive_file
+
+=head2 galileo_ready_signal
+
+=head2 galileo_error_signal
+
+=head2 galileo_close_signal
+
+=head1 EVENTS
+
+L<Mojolicious::Plugin::GalileoSend> adds handlers to both the websocket C<text> and C<binary> events which should not be changed. Futher it causes the websocket to emit several new events.
+
+=head2 file_start
+
+=head2 file_chunk
+
+=head2 file_finish
 
 =head1 SEE ALSO
 
 L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicio.us>.
 
-=cut
+=head1 SOURCE REPOSITORY
+
+L<http://github.com/jberger/GalileoSend>
+
+=head1 AUTHOR
+
+Joel Berger, E<lt>joel.a.berger@gmail.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2013 by Joel Berger
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
