@@ -71,9 +71,7 @@ sub setup_ws {
 
       # got close signal
       if ( $status->{close} ) {
-        if ( $finished ) {
-          $success = 1;
-        }
+        $success = 1 if $finished;
         $self->finish;
         return;
       }
@@ -82,9 +80,7 @@ sub setup_ws {
       if ( $status->{error} ) {
         mywarn( $status->{error} );
         push @$error_messages, $status;
-        if ( $status->{fatal} ) {
-          $self->finish;
-        }
+        $self->finish if $status->{fatal};
         return;
       }
 
