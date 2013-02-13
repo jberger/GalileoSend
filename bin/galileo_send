@@ -13,16 +13,10 @@ GetOptions(
   'url=s' => \$spec->{url},
 );
 
-# Start as sender
-if ( $spec->{url} ) {
-  require App::GalileoSend;
-  my $sender = App::GalileoSend->new( $spec );
-  $sender->send( @ARGV );
-  exit;
-}
+die "A url is required" unless $spec->{url};
 
-# Start as receiver
-require Mojolicious::Commands;
-Mojolicious::Commands->start_app('App::GalileoSend::Receiver');
+require App::GalileoSend;
+my $sender = App::GalileoSend->new( $spec );
+$sender->send( @ARGV );
 
 
