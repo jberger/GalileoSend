@@ -1,16 +1,10 @@
 #!/usr/bin/env perl
 
-
-#########################
-#
-# Not yet functioning !!!
-#
-#########################
-
 use Mojo::Base -strict;
 
 use Mojo::UserAgent;
 use Mojo::IOLoop;
+use Fcntl 'SEEK_SET';
 
 use Mojo::URL;
 use Mojo::JSON 'j';
@@ -18,16 +12,15 @@ use Mojo::JSON 'j';
 use File::Basename;
 use Getopt::Long;
 
-local $| = 1;
-
 GetOptions(
-  'chunksize=s' => \(my $chunksize = 250000),
+  'chunksize=i' => \(my $chunksize = 250000),
 );
 
 my $url = shift;
 $url = "//$url" unless $url =~ m!^(?:\w+:)?//!; # must be an absolute url
 $url = Mojo::URL->new($url);
 $url->scheme('ws');
+$url = "$url";
 
 my $ua = Mojo::UserAgent->new;
 my $delay = Mojo::IOLoop->delay;
@@ -48,12 +41,6 @@ sub setup_ws {
     size => -s $file,
   };
 
-  my $fh;
-  unless ( open $fh, '<', $file ) {
-    warn "$file could not be opened, aborting\n";
-    return;
-  };
-
   my $slice_start = 0;
   my $end = $filedata->{size};
   my $finished = 0;
@@ -62,7 +49,7 @@ sub setup_ws {
 
   $delay->begin;
 
-  $ua->websocket($url, sub {
+  $ua->websocket( $url => sub {
     my ($ua, $tx) = @_;
 
     $tx->on( text => sub {
@@ -94,26 +81,28 @@ sub setup_ws {
       }
 
       # server is ready for next chunk
-      my $length = $status->{chunksize} || $chunksize;
-      my $remaining = $end - $slice_start;
-      $length = $remaining if $length > $remaining;
+      my $fh;
+      unless ( open $fh, '<', $file ) {
+        warn "$file could not be opened, aborting\n";
+        return;
+      };
 
       my $temp;
-      my $read = read $fh, $temp, $slice_start, $length;
+      sysseek $fh, $slice_start, SEEK_SET;
+      my $read = sysread $fh, $temp, ($status->{chunksize} || $chunksize);
       unless ( defined $read ) {
         warn "Error reading from $file\n";
         return;
       }
 
-      $self->send({ binary => $temp });
-
-      #if ( $read ) {
+      if ( $read ) {
         $slice_start += $read;
         warn $slice_start / $end * 100 . "%\n";
-      #} else {
-      #  $finished = 1;  # read returns 0 on EOF
-      #  warn "100%\n";
-      #}
+      } else {
+        $finished = 1;
+      }
+
+      $self->send({ binary => $temp });
     });
 
     $tx->on( finish => sub {
@@ -133,7 +122,7 @@ sub setup_ws {
       $delay->end;
     });
 
-    $tx->send({ text => j( $filedata ) });
+    $tx->send({ text => j( $filedata ) }) if $tx->is_websocket;
   });
 
 }
