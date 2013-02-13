@@ -13,6 +13,7 @@ GetOptions(
   'receive' => \my $receive,
 );
 
+# Start as sender
 unless ( $receive ) {
   require App::GalileoSend;
   $spec->{url} = shift;
@@ -21,7 +22,7 @@ unless ( $receive ) {
   exit;
 }
 
-# Start command line interface for application
+# Start as receiver
 require Mojolicious::Commands;
 Mojolicious::Commands->start_app('App::GalileoSend::Receiver');
 
