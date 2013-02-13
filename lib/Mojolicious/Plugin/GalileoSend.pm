@@ -126,7 +126,7 @@ sub register {
       }
 
       my $target = $meta->{name} || 'unknown';
-      if ( -d $meta->{directory} ) {
+      if ( exists $meta->{directory} && -d $meta->{directory} ) {
         $target = File::Spec->catfile( $meta->{directory}, $target );
       }
       $file->move_to($target);
