@@ -1,0 +1,28 @@
+#!/usr/bin/env perl
+
+use Mojo::Base -strict;
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+use Getopt::Long;
+
+my $spec = {};
+GetOptions(
+  'chunksize=i' => \$spec->{max_chunksize},
+  'receive' => \my $receive,
+);
+
+unless ( $receive ) {
+  require App::GalileoSend;
+  $spec->{url} = shift;
+  my $sender = App::GalileoSend->new( $spec );
+  $sender->send( @ARGV );
+  exit;
+}
+
+# Start command line interface for application
+require Mojolicious::Commands;
+Mojolicious::Commands->start_app('App::GalileoSend::Receiver');
+
+
