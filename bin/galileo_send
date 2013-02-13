@@ -10,13 +10,12 @@ use Getopt::Long;
 my $spec = {};
 GetOptions(
   'chunksize=i' => \$spec->{max_chunksize},
-  'receive' => \my $receive,
+  'url=s' => \$spec->{url},
 );
 
 # Start as sender
-unless ( $receive ) {
+if ( $spec->{url} ) {
   require App::GalileoSend;
-  $spec->{url} = shift;
   my $sender = App::GalileoSend->new( $spec );
   $sender->send( @ARGV );
   exit;
