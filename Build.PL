@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 
-use 5.10.1;
 use Module::Build;
 
 my $builder = Module::Build->new(
@@ -10,7 +9,6 @@ my $builder = Module::Build->new(
   license => 'perl',
   
   requires => {
-    'perl' => '5.10.1',
     'Mojolicious' => '3.83',  # Getopt::Long fix
     'File::ShareDir' => 0,
   },
