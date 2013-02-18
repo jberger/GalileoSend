@@ -1,4 +1,4 @@
-package App::GalileoSend::Receiver;
+package GalileoSend::Receiver;
 
 use Mojo::Base 'Mojolicious';
 

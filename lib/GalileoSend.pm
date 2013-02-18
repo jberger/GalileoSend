@@ -1,4 +1,4 @@
-package App::GalileoSend;
+package GalileoSend;
 
 use Mojo::Base -base;
 
@@ -8,7 +8,7 @@ use Mojo::IOLoop;
 use Mojo::URL;
 use Mojo::JSON 'j';
 
-use App::GalileoSend::File;
+use GalileoSend::File;
 
 has [qw/max_chunksize url/];
 has delay => sub { Mojo::IOLoop->delay };
@@ -23,12 +23,12 @@ sub send {
 sub start_tx {
   my ($self, $file) = @_;
 
-  unless ( eval { $file->isa( 'App::GalileoSend::File' ) } ) {
+  unless ( eval { $file->isa( 'GalileoSend::File' ) } ) {
     my $spec = { path => $file };
     if ( my $size = $self->max_chunksize ) {
       $spec->{max_chunksize} = $size;
     }
-    $file = App::GalileoSend::File->new( $spec );
+    $file = GalileoSend::File->new( $spec );
   }
 
   my $delay = $self->delay;
