@@ -7,7 +7,7 @@ use Cwd;
 
 use File::Temp ();
 
-use GalileoSend;
+use GalileoSend::Sender;
 use GalileoSend::File;
 
 my $orig = getcwd;
@@ -30,11 +30,11 @@ my $t = Test::Mojo->new('GalileoSend::Receiver');
 {
   no warnings 'redefine';
   my $url = $t->app->url_for('/')->to_abs;
-  *GalileoSend::ws_url = sub { $url };
+  *GalileoSend::Sender::ws_url = sub { $url };
 }
 
 my $ua = $t->ua;
-my $sender = GalileoSend->new( ua => $ua, delay => $ua->ioloop->delay );
+my $sender = GalileoSend::Sender->new( ua => $ua, delay => $ua->ioloop->delay );
 
 my $got = 'got';
 my $file = GalileoSend::File->new( path => $sent, name => $got );

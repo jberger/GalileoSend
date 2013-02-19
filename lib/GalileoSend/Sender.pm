@@ -1,4 +1,4 @@
-package GalileoSend;
+package GalileoSend::Sender;
 
 use Mojo::Base -base;
 

@@ -15,8 +15,8 @@ GetOptions(
 
 die "A url is required" unless $spec->{url};
 
-require GalileoSend;
-my $sender = GalileoSend->new( $spec );
+require GalileoSend::Sender;
+my $sender = GalileoSend::Sender->new( $spec );
 $sender->send( @ARGV );
 
 
