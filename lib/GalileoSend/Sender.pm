@@ -10,6 +10,8 @@ use Mojo::JSON 'j';
 
 use GalileoSend::File;
 
+use constant DEBUG => $ENV{GALILEOSEND_SENDER_DEBUG};
+
 has [qw/max_chunksize url/];
 has delay => sub { Mojo::IOLoop->delay };
 has ua    => sub { Mojo::UserAgent->new };
@@ -72,10 +74,10 @@ sub start_tx {
       }
 
       # server is ready for next chunk
-      my ($buffer, $read) = $file->get_chunk( $status->{chunksize} );
+      my ($buffer, $read) = $file->get_next_chunk( $status->{chunksize} );
 
       if ( $read ) {
-        warn $file->pos / $file->size * 100 . "%\n";
+        warn( $file->pos / $file->size * 100 . "%\n" ) if DEBUG;
       } else {
         $finished = 1;
       }

@@ -9,7 +9,7 @@ my $builder = Module::Build->new(
   license => 'perl',
   
   requires => {
-    'Mojolicious' => '3.83',  # Getopt::Long fix
+    'Mojolicious' => '3.86',  # Mojo::Asset::File changes
     'File::ShareDir' => 0,
   },
   configure_requires => {
