@@ -33,8 +33,7 @@ sub start_tx {
     $file = GalileoSend::File->new( $spec );
   }
 
-  my $delay = $self->delay;
-  $delay->begin;
+  my $end = $self->delay->begin;
 
   $self->ua->websocket( $self->ws_url => sub {
     my ($ua, $tx) = @_;
@@ -97,7 +96,7 @@ sub start_tx {
         warn Data::Dumper::Dumper($error_messages);
       }
 
-      $delay->end;
+      $end->();
     });
 
     $tx->send({ text => j( $file->meta ) });

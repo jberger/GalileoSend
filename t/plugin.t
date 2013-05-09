@@ -42,7 +42,7 @@ subtest 'Standard Transmission' => sub {
   $t->websocket_ok('/')
     ->send_ok(json( $sent_meta ))
     ->message_ok
-    ->json_message_is( '/' => { ready => 1 } );
+    ->json_message_is( '' => { ready => 1 } );
 
   isa_ok( $file, 'Mojo::Asset');
 
@@ -59,13 +59,13 @@ subtest 'Standard Transmission' => sub {
 
   $t->send_ok(bytes('x' x 4))
     ->message_ok
-    ->json_message_is( '/' => { ready => 1 } );
+    ->json_message_is( '' => { ready => 1 } );
 
   is( $file->size, 4, 'got size');
 
   $t->send_ok(bytes('x' x 6))
     ->message_ok
-    ->json_message_is( '/' => { ready => 1 } );
+    ->json_message_is( '' => { ready => 1 } );
 
   is( $file->size, 10, 'got size');
 
@@ -88,13 +88,13 @@ subtest 'Incomplete Transmission' => sub {
   $t->websocket_ok('/')
     ->send_ok(json( $sent_meta ))
     ->message_ok
-    ->json_message_is( '/' => { ready => 1 } );
+    ->json_message_is( '' => { ready => 1 } );
 
   isa_ok( $file, 'Mojo::Asset');
 
   $t->send_ok(bytes('x' x 8))
     ->message_ok
-    ->json_message_is( '/' => { ready => 1 } );
+    ->json_message_is( '' => { ready => 1 } );
 
   is( $file->size, 8, 'got size');
 
@@ -102,7 +102,7 @@ subtest 'Incomplete Transmission' => sub {
 
   $t->send_ok(json({ finished => \1 }))
     ->message_ok
-    ->json_message_is( '/' => { error => 'Expected: 10 bytes. Got: 8 bytes.', fatal => 1 } )
+    ->json_message_is( '' => { error => 'Expected: 10 bytes. Got: 8 bytes.', fatal => 1 } )
     ->finish_ok;
 
 };
